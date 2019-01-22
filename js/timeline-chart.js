@@ -15,16 +15,16 @@ class TimelineChart {
         let elementHeight = options.height || element.clientHeight;
 
         let margin = {
-            top: 0,
+            top: 20,
             right: 0,
-            bottom: 20,
+            bottom: 0,
             left: 0
         };
 
         let width = elementWidth - margin.left - margin.right;
         let height = elementHeight - margin.top - margin.bottom;
 
-        let groupWidth = (options.hideGroupLabels)? 0: 200;
+        let groupWidth = (options.hideGroupLabels)? 0: 100;
 
         let x = d3.time.scale()
             .domain([minDt, maxDt])
@@ -32,10 +32,12 @@ class TimelineChart {
 
         let xAxis = d3.svg.axis()
             .scale(x)
-            .orient('bottom')
-            .tickSize(-height);
+            .orient('top')
+            .tickSize(-height)
+            ;//.tickFormat();
 
         let zoom = d3.behavior.zoom()
+            .scaleExtent([options.minScale, options.maxScale])
             .x(x)
             .on('zoom', zoomed);
 
@@ -45,6 +47,14 @@ class TimelineChart {
             .append('g')
             .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
             .call(zoom);
+        
+        svg.append('g')
+            .attr('class', 'x axis')
+            .call(xAxis);
+
+        svg.append('line')
+            .attr('x1', 0)
+            .attr('x2', width);
 
         svg.append('defs')
             .append('clipPath')
@@ -61,11 +71,6 @@ class TimelineChart {
             .attr('y', 0)
             .attr('height', height)
             .attr('width', width - groupWidth)
-
-        svg.append('g')
-            .attr('class', 'x axis')
-            .attr('transform', 'translate(0,' + height + ')')
-            .call(xAxis);
 
         if (options.enableLiveTimer) {
             self.now = svg.append('line')
@@ -171,6 +176,12 @@ class TimelineChart {
             setInterval(updateNowMarker, options.timerTickInterval);
         }
 
+        function customDate(dateObject) {
+            // i18n 
+            const weekdays = ['']
+            return '';
+        }
+
         function updateNowMarker() {
             let nowX = x(new Date());
 
@@ -183,8 +194,16 @@ class TimelineChart {
 
         function zoomed() {
             if (self.onVizChangeFn && d3.event) {
+                let scale = d3.event.scale;
+                if (d3.event.scale < options.minScale) {
+                    scale = options.minScale;
+                }
+                if (d3.event.scale > options.maxScale) {
+                    scale = options.maxScale;
+                 }
+                 
                 self.onVizChangeFn.call(self, {
-                    scale: d3.event.scale,
+                    scale: scale,
                     translate: d3.event.translate,
                     domain: x.domain()
                 });
@@ -254,7 +273,9 @@ class TimelineChart {
             textTruncateThreshold: 30,
             enableLiveTimer: false,
             timerTickInterval: 1000,
-            hideGroupLabels: false
+            hideGroupLabels: false,
+            minScale: 0.02,
+            maxScale: 4.00,
         };
         Object.keys(ext).map(k => defaultOptions[k] = ext[k]);
         return defaultOptions;
@@ -275,5 +296,3 @@ TimelineChart.TYPE = {
     POINT: Symbol(),
     INTERVAL: Symbol()
 };
-
-module.exports = TimelineChart;
